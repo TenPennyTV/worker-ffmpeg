@@ -2,7 +2,7 @@ import ffmpeg
 import logging
 import argparse
 import requests
-import hashlib
+import os
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__file__)
@@ -15,11 +15,20 @@ parser.add_argument('out_filename', help='Output filename')
 
 
 def create_preview(url, output, length=60):
+    if os.path.isfile(output):
+        return output
     video_file = download_file(url)
-
     ffmpeg.input(video_file, ss=0, t=length).output(
-        output, s='854x480', vcodec='libx264', acodec='libfdk_aac', audio_bitrate=128000, speed=2, crf=23,
-    ).overwrite_output().run()
+        output,
+        vf="scale='w=if(gt(a,16/9),854,-2):h=if(gt(a,16/9),-2,480)'",
+        vcodec='libx264',
+        video_bitrate=1200000,
+        acodec='aac',
+        audio_bitrate=128000, speed=2, crf=24,
+        pix_fmt='yuv420p',
+        preset='fast',
+    ).global_args('-nostdin').overwrite_output().run()
+    return output
 
 
 def download_file(url):
@@ -32,28 +41,39 @@ def download_file(url):
     return local_filename
 
 
-def transcode_video(resolution='480p', type='full', url=None):
-    filename = download_file(url)
-    outfile = hashlib.sha256(filename.encode('utf-8')).hexdigest() + '.mp4'
-    if type == 'preview':
-        create_preview(filename, outfile)
-    elif type == 'full':
-        if resolution == '480p':
-            create_480p_version(filename, outfile)
-        else:
-            create_720p_version(filename, outfile)
+def create_480p_version(url, output):
+    if os.path.isfile(output):
+        return output
+    video_file = download_file(url)
+    ffmpeg.input(video_file, ss=0).output(
+        output,
+        vf="scale='w=if(gt(a,16/9),854,-2):h=if(gt(a,16/9),-2,480)'",
+        vcodec='libx264',
+        video_bitrate=1200000,
+        acodec='aac',
+        audio_bitrate=128000, speed=2, crf=24,
+        pix_fmt='yuv420p',
+        preset='fast',
+    ).global_args('-nostdin').overwrite_output().run()
+    return output
 
 
-def create_480p_version(input, output):
-    ffmpeg.input(input, ss=0).output(
-        output, s='854x480', vcodec='libx264', video_bitrate=1200000, acodec='libfdk_aac', audio_bitrate=128000, speed=2, crf=30
-    ).overwrite_output().run()
-
-
-def create_720p_version(input, output):
-    ffmpeg.input(input, ss=0).output(
-        output, s='1280x720', vcodec='libx264', video_bitrate=2400000, acodec='libfdk_aac', audio_bitrate=128000, speed=2, crf=30
-    ).overwrite_output().run()
+def create_720p_version(url, output):
+    if os.path.isfile(output):
+        return output
+    video_file = download_file(url)
+    ffmpeg.input(video_file, ss=0).output(
+        output,
+        vf="scale='w=if(gt(a,16/9),1280,-2):h=if(gt(a,16/9),-2,720)'",
+        vcodec='libx264',
+        video_bitrate=2400000,
+        acodec='aac',
+        audio_bitrate=128000,
+        speed=2, crf=24,
+        pix_fmt='yuv420p',
+        preset='fast',
+    ).global_args('-nostdin').overwrite_output().run()
+    return output
 
 
 if __name__ == '__main__':

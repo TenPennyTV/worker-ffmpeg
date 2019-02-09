@@ -14,6 +14,8 @@ transcode_task = Table('transcode_task', meta,
                        Column('in_directory', String),
                        Column('out_directory', String),
                        Column('content_id', Integer),
+                       Column('retry_count', Integer),
+                       Column('status', Integer),
                        Column('uuid', String)
                        )
 
@@ -25,7 +27,8 @@ content_tracks = Table('content_tracks', meta,
                        Column('content_id', Integer),
                        Column('quality', String),
                        Column('directory', String),
-                       Column('file_name', String)
+                       Column('file_name', String),
+                       Column('content_type', String)
                        )
 
 ContentTrack = namedtuple('ContentTrack', content_tracks.columns.keys())
